@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // UI Components
@@ -19,6 +19,16 @@ import SolarSystemWrapper from "@/components/3d/SolarSystem";
 export default function Home() {
   const [activeSection, setActiveSection] = useState<string>('galaxy');
   const [showUI, setShowUI] = useState<boolean>(false);
+
+  // Cinematic intro sequence
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Use the existing function to trigger the smooth camera zoom and UI fade-in
+      handlePlanetSelect('hero');
+    }, 1500); // Wait 1.5 seconds looking at the galaxy before flying in
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePlanetSelect = (id: string) => {
     setActiveSection(id);
@@ -61,18 +71,17 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-white tracking-widest uppercase">
             F RENISH
           </h1>
-          <p className="text-cyan-400 text-sm">Interactive Portfolio System</p>
         </div>
 
         {/* UI Overlay Container (Fades in when a planet is selected) */}
         <AnimatePresence>
           {activeSection !== 'galaxy' && showUI && (
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-              className="absolute right-0 top-0 bottom-0 w-full md:w-[600px] lg:w-[800px] bg-black/60 backdrop-blur-2xl border-l border-white/10 shadow-2xl overflow-y-auto z-40 custom-scrollbar"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+              className="absolute right-0 bottom-0 md:top-0 w-full h-[85vh] md:h-full md:w-[500px] lg:w-[650px] bg-black/75 md:bg-black/60 backdrop-blur-3xl border-t md:border-t-0 md:border-l border-white/10 shadow-2xl overflow-y-auto z-40 custom-scrollbar rounded-t-[2.5rem] md:rounded-none"
             >
               {/* Back Button */}
               <div className="sticky top-0 z-50 p-6 bg-gradient-to-b from-black/90 to-transparent flex justify-between items-center">

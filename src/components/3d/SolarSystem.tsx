@@ -15,7 +15,7 @@ const BASE_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examp
 
 // Using optimized 2K textures to completely eliminate lag on mobile devices and low-end GPUs
 const PLANETS = [
-  { id: 'hero', name: 'Home Base', radius: 3.5, distance: 20, speed: 0.15, color: '#ffffff', textureUrl: `${BASE_URL}/earth_atmos_2048.jpg`, normalUrl: `${BASE_URL}/earth_normal_2048.jpg`, initialAngle: Math.PI * 0.2 },
+  { id: 'hero', name: 'Home', radius: 3.5, distance: 20, speed: 0.15, color: '#ffffff', textureUrl: `${BASE_URL}/earth_atmos_2048.jpg`, normalUrl: `${BASE_URL}/earth_normal_2048.jpg`, initialAngle: Math.PI * 0.2 },
   { id: 'projects', name: 'Projects', radius: 5.5, distance: 38, speed: 0.08, color: '#fef08a', textureUrl: `${BASE_URL}/earth_clouds_1024.png`, hasRings: true, initialAngle: Math.PI * 0.8 },
   { id: 'experience', name: 'Experience', radius: 4, distance: 56, speed: 0.05, color: '#ef4444', textureUrl: `${BASE_URL}/earth_atmos_2048.jpg`, initialAngle: Math.PI * 1.4 },
   { id: 'education', name: 'Education', radius: 4.5, distance: 74, speed: 0.04, color: '#fbcfe8', textureUrl: `${BASE_URL}/earth_atmos_2048.jpg`, initialAngle: Math.PI * 1.9 },
@@ -52,37 +52,50 @@ function BlackHole({ position }: { position: [number, number, number] }) {
 function Scene({ activeSection, onPlanetSelect }: SolarSystemProps) {
   const cameraControlsRef = useRef<CameraControls>(null);
 
-  // Initial camera setup
+  // Camera setup and transitions
   useEffect(() => {
-    if (cameraControlsRef.current) {
-      if (activeSection === 'galaxy') {
-        cameraControlsRef.current.setLookAt(0, 80, 140, 0, 0, 0, true);
-      }
+    if (!cameraControlsRef.current) return;
+    
+    // Only handle galaxy view here. Planet views are handled perfectly by handlePlanetActivate 
+    // when the planet component reports its exact dynamic world position!
+    if (activeSection === 'galaxy') {
+      cameraControlsRef.current.setLookAt(0, 80, 140, 0, 0, 0, true);
     }
   }, [activeSection]);
 
   const handlePlanetClick = (id: string, position: THREE.Vector3, radius: number) => {
     if (activeSection === id) return;
-    
-    if (cameraControlsRef.current) {
-      // Dynamically calculate camera distance based on planet radius to perfectly frame it
-      // For a radius of 5.5, dist = 5.5 * 6 = 33 units away.
-      const dist = radius * 6;
-      
-      const offset = position.clone().normalize().multiplyScalar(dist);
-      // Offset Y so the camera is slightly higher, looking down, which pushes the planet to the bottom of the screen
-      // so it doesn't overlap with the central HTML UI text.
-      offset.y += radius * 1.5; 
-      
-      const targetCamPos = position.clone().add(offset);
-      
-      cameraControlsRef.current.setLookAt(
-        targetCamPos.x, targetCamPos.y, targetCamPos.z,
-        position.x, position.y + (radius * 0.5), position.z,
-        true
-      );
-    }
     onPlanetSelect(id);
+  };
+
+  const handlePlanetActivate = (id: string, position: THREE.Vector3, radius: number) => {
+    if (!cameraControlsRef.current) return;
+    
+    // Dynamically calculate camera distance based on planet radius
+    const dist = radius * 6;
+    
+    const offset = position.clone().normalize().multiplyScalar(dist);
+    offset.y += radius * 1.5; 
+    
+    const camPos = position.clone().add(offset);
+    
+    // To make the planet appear clearly on the LEFT side (since the UI is on the right),
+    // we must calculate the camera's Right vector and shift the camera & target to the right!
+    const viewDir = position.clone().sub(camPos).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const rightDir = viewDir.clone().cross(up).normalize();
+    
+    const shiftAmount = radius * 2.5; // Adjust this to push planet more left
+    
+    camPos.add(rightDir.clone().multiplyScalar(shiftAmount));
+    const lookAtTarget = position.clone().add(rightDir.clone().multiplyScalar(shiftAmount));
+    lookAtTarget.y += (radius * 0.5); // Look slightly above center
+
+    cameraControlsRef.current.setLookAt(
+      camPos.x, camPos.y, camPos.z,
+      lookAtTarget.x, lookAtTarget.y, lookAtTarget.z,
+      true
+    );
   };
 
   return (
@@ -135,6 +148,7 @@ function Scene({ activeSection, onPlanetSelect }: SolarSystemProps) {
               {...planet}
               isActive={activeSection === planet.id}
               onClick={handlePlanetClick}
+              onActivate={handlePlanetActivate}
             />
           ))}
         </Suspense>

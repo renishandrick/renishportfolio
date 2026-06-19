@@ -19,6 +19,7 @@ interface PlanetProps {
   ringColor?: string;
   isActive: boolean;
   onClick: (id: string, position: THREE.Vector3, radius: number) => void;
+  onActivate: (id: string, position: THREE.Vector3, radius: number) => void;
 }
 
 export default function Planet({
@@ -35,6 +36,7 @@ export default function Planet({
   ringColor,
   isActive,
   onClick,
+  onActivate,
 }: PlanetProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const orbitGroupRef = useRef<THREE.Group>(null);
@@ -50,6 +52,16 @@ export default function Planet({
       orbitGroupRef.current.rotation.y = initialAngle;
     }
   }, [initialAngle]);
+
+  // When this planet becomes active, calculate its exact current world position and notify the parent
+  // so the camera can perfectly lock onto it no matter where it is in its orbit!
+  useEffect(() => {
+    if (isActive && meshRef.current) {
+      const pos = new THREE.Vector3();
+      meshRef.current.getWorldPosition(pos);
+      onActivate(id, pos, radius);
+    }
+  }, [isActive, id, radius, onActivate]);
 
   const orbitPoints = [];
   for (let i = 0; i <= 64; i++) {
